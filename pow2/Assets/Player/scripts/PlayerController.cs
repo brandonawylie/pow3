@@ -122,7 +122,7 @@ public class PlayerController : MonoBehaviour {
 		}
 
         DoMovement();
-        DoJump();
+        //DoJump();
 		DoControllerRotation();
 		DoShoot();
 		DoAttack();
@@ -134,9 +134,9 @@ public class PlayerController : MonoBehaviour {
 
         if (inputX != 0) {
             if (!shooting) {
-				if (inputX > 0 && !isFacingRight) {
+				if (inputX > 0 && !isFacingRight && !wallRiding) {
 	                Flip();
-	            } else if (inputX < 0 && isFacingRight) {
+	            } else if (inputX < 0 && isFacingRight && !wallRiding) {
 	                Flip();
 	            }
 				
@@ -159,7 +159,7 @@ public class PlayerController : MonoBehaviour {
 		}
     }
 
-    void DoJump() {
+    /*void DoJump() {
 		if (InputManager.ActiveDevice.Action1.WasPressed) {//if (Input.GetButtonDown(jumpButtonName)) {
 			canShoot = true;
 			jumping = true;
@@ -172,17 +172,40 @@ public class PlayerController : MonoBehaviour {
                 this.playerRigidbody.velocity = jumpWithDirectionVector * Time.fixedDeltaTime;
             }
         }
-    }
+    }*/
 
 	void DoShoot() {
-		if (InputManager.ActiveDevice.RightTrigger.Value != 0 && canShoot) {
+		canShoot = usedJumps < totalJumps;
+		if (InputManager.ActiveDevice.RightTrigger.WasPressed && canShoot) {
+			usedJumps++;
 			shooting = true;
 			canShoot = false;
-			float deg = (playerAim.transform.rotation.eulerAngles.z - shootAngleOffset) * Mathf.Deg2Rad;
-			float x = Mathf.Cos (deg);
-			float y = Mathf.Sin (deg);
-			print("shooting at an angle = " + deg + ", with vector x, y = " + new Vector2(x,y) );
-			this.playerRigidbody.velocity = new Vector2(x,y).normalized * 20;
+			float rad = (playerAim.transform.rotation.eulerAngles.z - shootAngleOffset) * Mathf.Deg2Rad;
+			float x = Mathf.Cos (rad);
+			float y = Mathf.Sin (rad);
+
+
+
+			float deg = playerAim.transform.rotation.eulerAngles.z - shootAngleOffset;
+			if (deg < 0) {
+				deg += 360.0f;		
+			}
+
+			print("shooting at angle: " + deg);
+
+			jumping = shooting = false;
+			if (deg >= 0 && deg <= 180) {
+				jumping = true;
+				this.playerRigidbody.velocity = new Vector2(x,y).normalized * 25;
+			} else {
+				if (deg > 180 && deg <= 270)
+					Flip ();
+				shooting = true;
+				playerSpriteRenderer.transform.rotation = Quaternion.Euler(0,0,deg);
+				this.playerRigidbody.velocity = new Vector2(x,y).normalized * 25;
+			}
+			this.playerAnimator.SetBool("jumping", jumping);
+			this.playerAnimator.SetBool("shooting", shooting);
 		}
 		return;
 	}
@@ -288,6 +311,8 @@ public class PlayerController : MonoBehaviour {
         isGrounded = true;
 		canShoot = true;
 		jumping = false;
+		shooting = false;
+		this.playerAnimator.SetBool ("shooting", shooting);
 		this.playerAnimator.SetBool("jumping", jumping);
 
         if (coll.gameObject.tag == "Enemy") { 
@@ -308,6 +333,7 @@ public class PlayerController : MonoBehaviour {
         if (coll.gameObject.tag == "Wall") {
 			wallRiding = true;
 			playerAnimator.SetBool("wallRiding", wallRiding);
+			Flip ();
 	        isOnWallRight = isOnWallLeft = false;
 	        if (coll.transform.position.x < transform.position.x) {	
 	            isOnWallLeft = true;
@@ -316,9 +342,10 @@ public class PlayerController : MonoBehaviour {
 	        }
 			return;
         }
-
+		print ("hitting ground");
 		this.playerRigidbody.freezeRotation = true;
 		this.transform.rotation = Quaternion.Euler(0,0,0);
+		this.playerSpriteRenderer.transform.rotation = Quaternion.Euler (0, 0, 0);
     }
 
      void OnCollisionExit2D(Collision2D coll) {
@@ -328,6 +355,7 @@ public class PlayerController : MonoBehaviour {
 			wallRiding = false;
 			playerAnimator.SetBool("wallRiding", wallRiding);
 			isOnWallRight = isOnWallLeft = false;
+			Flip ();
 			return;
 		}
     }
