@@ -126,6 +126,8 @@ public class PlayerController : MonoBehaviour {
 		DoControllerRotation();
 		DoShoot();
 		DoAttack();
+
+		ResolveCorrectDirection ();
         //DoDive();
     }
 
@@ -194,15 +196,20 @@ public class PlayerController : MonoBehaviour {
 			print("shooting at angle: " + deg);
 
 			jumping = shooting = false;
+			this.playerRigidbody.velocity = new Vector2(x,y).normalized * 1;
+			ResolveCorrectDirection();
 			if (deg >= 0 && deg <= 180) {
 				jumping = true;
-				this.playerRigidbody.velocity = new Vector2(x,y).normalized * 25;
+				this.playerRigidbody.velocity *= 25;
 			} else {
-				if (deg > 180 && deg <= 270)
-					Flip ();
+				if (deg > 180 && deg <= 270) {
+					playerSpriteRenderer.transform.rotation = Quaternion.Euler(0,0,deg + 180);
+
+				} else {
+					playerSpriteRenderer.transform.rotation = Quaternion.Euler(0,0,deg);
+				}
 				shooting = true;
-				playerSpriteRenderer.transform.rotation = Quaternion.Euler(0,0,deg);
-				this.playerRigidbody.velocity = new Vector2(x,y).normalized * 25;
+				this.playerRigidbody.velocity *= 25;
 			}
 			this.playerAnimator.SetBool("jumping", jumping);
 			this.playerAnimator.SetBool("shooting", shooting);
@@ -234,7 +241,7 @@ public class PlayerController : MonoBehaviour {
 			attacking = false;
 			this.playerAnimator.SetBool("attacking", attacking);
 		}
-		if (InputManager.ActiveDevice.Action2.WasPressed && !attacking && !shooting) {
+		if (InputManager.ActiveDevice.LeftTrigger.WasPressed && !attacking) {
 			attacking = true;
 			this.playerAnimator.SetBool("attacking", attacking);
 			curFramesAttack = 0;
@@ -254,6 +261,14 @@ public class PlayerController : MonoBehaviour {
     /*
         Utility functions
     */
+	void ResolveCorrectDirection() {
+		if (playerRigidbody.velocity.x > 0 && !isFacingRight) {
+			Flip ();
+		} else if (playerRigidbody.velocity.x < 0 && isFacingRight) {
+			Flip();
+		}
+	}
+
     void Flip() {
 		// Switch the way the player is labelled as facing
 		isFacingRight = !isFacingRight;
